@@ -1,4 +1,3 @@
-// src/services/userService.js
 import * as authService from './authService'
 
 const API_BASE = 'http://localhost:5118/api/Users'

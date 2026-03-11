@@ -10,8 +10,7 @@ function Register() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // Use the authService abstraction so switching to a real API is easy:
-    // authService.register will either call your backend (when configured) or use the local mock.
+
     authService.register(username, password)
       .then(() => {
         setMessage({ type: 'success', text: 'Registration successful!' })

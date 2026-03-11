@@ -20,12 +20,10 @@ export function AuthProvider({ children }) {
 
   const navigate = useNavigate()
 
-  // auto-check token expiry on mount and periodically
   useEffect(() => {
     function checkToken() {
       const token = getToken()
       if (token && isTokenExpired(token)) {
-        // token expired -> clear state and redirect to login
         setUser(null)
         clearToken()
         navigate('/login', { replace: true })
@@ -53,6 +51,7 @@ export function AuthProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext)
 }

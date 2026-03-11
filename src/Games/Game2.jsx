@@ -1,5 +1,4 @@
-// src/Games/Game2.jsx
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './Game2.css'
 
 import arcadeBg from '../assets/arcade.png'
@@ -8,41 +7,20 @@ import cardFrontImg from '../assets/kartya.jpg'
 import { useNavigate } from 'react-router-dom'
 import { submitScore, getMyScores, extractHighScoreForGame } from '../services/GameService'
 
-
 export default function Game2() {
   const GAME_NAME = 'Memory'
+  const GRID = 6
+  const PAIRS = 18
 
   const navigate = useNavigate()
 
-  const [running, setRunning] = useState(false)
-  const [ended, setEnded] = useState(false)
-
-  // Score = flip count (minél kisebb, annál jobb)
-  const [flips, setFlips] = useState(0)
-  const flipsRef = useRef(0)
-
-  // High score (kisebb = jobb)
-  // UI: ha null -> '-'
-  // belül: highScoreDbRef -> a DB raw értéke (0 is lehet)
-  const [highScore, setHighScore] = useState(null)
-  const highScoreRef = useRef(null)
-  const highScoreDbRef = useRef(0)
-
-  // Game state
-  const [deck, setDeck] = useState([]) // { id, value }
-  const [faceUp, setFaceUp] = useState([]) // max 2 index
-  const [matched, setMatched] = useState(() => new Set()) // Set<index>
-  const lockRef = useRef(false)
-
-  // deck settings
-  const GRID = 6
-  const PAIRS = 18 // 6x6 = 36 lap = 18 pár
-
-  const makeDeck = () => {
+  const makeDeck = useCallback(() => {
     const values = []
-    for (let i = 1; i <= PAIRS; i++) values.push(i, i)
 
-    // shuffle
+    for (let i = 1; i <= PAIRS; i++) {
+      values.push(i, i)
+    }
+
     for (let i = values.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[values[i], values[j]] = [values[j], values[i]]
@@ -52,32 +30,45 @@ export default function Game2() {
       id: `${idx}-${v}-${Math.random()}`,
       value: v
     }))
-  }
+  }, [PAIRS])
 
-  async function refreshHighScoreFromDb() {
-  try {
-    const scores = await getMyScores()
-    const { highScore: dbHigh } = extractHighScoreForGame(scores, GAME_NAME)
+  const [running, setRunning] = useState(false)
+  const [ended, setEnded] = useState(false)
 
-    const raw = Number(dbHigh) || 0
-    highScoreDbRef.current = raw
+  const [flips, setFlips] = useState(0)
+  const flipsRef = useRef(0)
 
-    // UI-ban: 0-t nem mutatunk, mert az "még nem játszott"
-    if (raw === 0) {
-      setHighScore(null)
-      highScoreRef.current = null
-      return
+  const [highScore, setHighScore] = useState(null)
+  const highScoreRef = useRef(null)
+  const highScoreDbRef = useRef(0)
+
+  const [deck, setDeck] = useState(() => makeDeck())
+  const [faceUp, setFaceUp] = useState([])
+  const [matched, setMatched] = useState(() => new Set())
+  const lockRef = useRef(false)
+
+  const refreshHighScoreFromDb = useCallback(async () => {
+    try {
+      const scores = await getMyScores()
+      const { highScore: dbHigh } = extractHighScoreForGame(scores, GAME_NAME)
+
+      const raw = Number(dbHigh) || 0
+      highScoreDbRef.current = raw
+
+      if (raw === 0) {
+        setHighScore(null)
+        highScoreRef.current = null
+        return
+      }
+
+      setHighScore(raw)
+      highScoreRef.current = raw
+    } catch (e) {
+      console.warn('Failed to refresh high score', e)
     }
+  }, [GAME_NAME])
 
-    setHighScore(raw)
-    highScoreRef.current = raw
-  } catch (e) {
-    console.warn('Failed to refresh high score', e)
-  }
-}
-
-
-  function resetGame({ preserveHigh = true } = {}) {
+  const resetGame = useCallback(({ preserveHigh = true } = {}) => {
     setDeck(makeDeck())
     setFaceUp([])
     setMatched(new Set())
@@ -94,36 +85,32 @@ export default function Game2() {
       highScoreRef.current = null
       highScoreDbRef.current = 0
     }
-  }
+  }, [makeDeck])
 
-  async function finishGame() {
-  setRunning(false)
-  setEnded(true)
+  const finishGame = useCallback(async () => {
+    setRunning(false)
+    setEnded(true)
 
-  const current = flipsRef.current
-  const dbHighRaw = highScoreDbRef.current // 0 is lehet
+    const current = flipsRef.current
+    const dbHighRaw = highScoreDbRef.current
 
-  // szabály: ha DB=0 => mindig mentsünk; különben csak ha current < dbHigh
-  const shouldUpdate = (dbHighRaw === 0) || (current < dbHighRaw)
+    const shouldUpdate = dbHighRaw === 0 || current < dbHighRaw
 
-  if (shouldUpdate) {
-    try {
-      // Memory: lower is better, DB=0 -> mindig ments
-      await submitScore(GAME_NAME, current, { mode: 'lower', zeroMeansUnset: true })
+    if (shouldUpdate) {
+      try {
+        await submitScore(GAME_NAME, current, { mode: 'lower', zeroMeansUnset: true })
 
-      // UI frissítés azonnal
-      setHighScore(current)
-      highScoreRef.current = current
-      highScoreDbRef.current = current
-    } catch (e) {
-      console.warn('submitScore failed', e)
+        setHighScore(current)
+        highScoreRef.current = current
+        highScoreDbRef.current = current
+      } catch (e) {
+        console.warn('submitScore failed', e)
+        await refreshHighScoreFromDb()
+      }
+    } else {
       await refreshHighScoreFromDb()
     }
-  } else {
-    await refreshHighScoreFromDb()
-  }
-}
-
+  }, [GAME_NAME, refreshHighScoreFromDb])
 
   function onCardClick(index) {
     if (lockRef.current) return
@@ -155,9 +142,9 @@ export default function Game2() {
             n.add(b)
             return n
           })
+
           setFaceUp([])
 
-          // ⚠️ matched state frissítése aszinkron, ezért itt számolunk kézzel:
           const willBeMatchedCount = matched.size + 2
 
           if (willBeMatchedCount >= deck.length) {
@@ -174,11 +161,11 @@ export default function Game2() {
     }
   }
 
-  // Space: start / restart
   useEffect(() => {
     const onKey = (e) => {
       if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault()
+
         if (ended) {
           resetGame({ preserveHigh: true })
           setRunning(true)
@@ -190,43 +177,72 @@ export default function Game2() {
 
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [ended, running])
+  }, [ended, running, resetGame])
 
   useEffect(() => {
-    resetGame({ preserveHigh: true })
-    refreshHighScoreFromDb()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  let cancelled = false
+
+  async function loadHighScore() {
+    try {
+      const scores = await getMyScores()
+      const { highScore: dbHigh } = extractHighScoreForGame(scores, GAME_NAME)
+
+      const raw = Number(dbHigh) || 0
+
+      if (cancelled) return
+
+      highScoreDbRef.current = raw
+
+      if (raw === 0) {
+        setHighScore(null)
+        highScoreRef.current = null
+        return
+      }
+
+      setHighScore(raw)
+      highScoreRef.current = raw
+    } catch (e) {
+      if (!cancelled) {
+        console.warn('Failed to refresh high score', e)
+      }
+    }
+  }
+
+  loadHighScore()
+
+  return () => {
+    cancelled = true
+  }
+}, [GAME_NAME])
 
   const pageStyle = useMemo(() => ({ '--game2-bg': `url(${arcadeBg})` }), [])
 
   return (
     <div className="game2-page" style={pageStyle}>
       <div className="arcade-frame">
-        {/* BAL: score + high */}
         <div className="score">
           <div>Score: {flips}</div>
           <div>High: {highScore == null ? '-' : highScore}</div>
         </div>
 
-        {/* JOBB: back */}
         <div
           className="back"
           role="button"
           tabIndex={0}
           onClick={() => navigate('/')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/') }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') navigate('/')
+          }}
         >
           Back
         </div>
 
-        {/* Playfield */}
         <div className="screen-center">
           <div
             className="memory-board"
             style={{
               gridTemplateColumns: `repeat(${GRID}, var(--card-w))`,
-              gridAutoRows: `var(--card-h)`
+              gridAutoRows: 'var(--card-h)'
             }}
           >
             {deck.map((card, idx) => {
@@ -241,10 +257,8 @@ export default function Game2() {
                   type="button"
                 >
                   <div className="card-inner">
-                    {/* BACK */}
                     <div className="card-face back-face" />
 
-                    {/* FRONT */}
                     <div className="card-face front-face">
                       <div
                         className="front-texture"
@@ -258,7 +272,6 @@ export default function Game2() {
             })}
           </div>
 
-          {/* Overlay */}
           {!running && (
             <div
               className="start-overlay"
@@ -266,7 +279,9 @@ export default function Game2() {
                 if (ended) {
                   resetGame({ preserveHigh: true })
                   setRunning(true)
-                } else setRunning(true)
+                } else {
+                  setRunning(true)
+                }
               }}
             >
               <div className="start-text">

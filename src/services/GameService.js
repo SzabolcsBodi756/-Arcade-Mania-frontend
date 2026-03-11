@@ -1,11 +1,9 @@
-// src/services/gameService.js
+
 import { getToken, logout } from './authService'
 
 const API_BASE = 'http://localhost:5118/api/Users'
 
-// ----------------------------
-// Auth fetch helpers
-// ----------------------------
+
 async function authFetch(url, options = {}) {
   const token = getToken()
   if (!token) {
@@ -46,9 +44,7 @@ async function readJsonOrThrow(resp, defaultErr) {
   return data
 }
 
-// ----------------------------
-// NEW API: ME SCORES
-// ----------------------------
+
 export async function getMyScores() {
   const resp = await authFetch(`${API_BASE}/me/scores`, { method: 'GET' })
   const data = await readJsonOrThrow(resp, 'Nem sikerült lekérni a pontszámokat.')
@@ -65,9 +61,7 @@ export async function updateMyScores(scoresArray) {
   return true
 }
 
-// ----------------------------
-// Helpers
-// ----------------------------
+
 function normalizeName(s) {
   return String(s || '').trim().toLowerCase()
 }
@@ -89,13 +83,9 @@ export function extractHighScoreForGame(scoresArray, gameName) {
   }
 }
 
-// ----------------------------
-// MAIN: submitScore
-// - higher: nagyobb a jobb (snake, fighter)
-// - lower: kisebb a jobb (memory), zeroMeansUnset opcióval
-// ----------------------------
+
 export async function submitScore(gameName, score, options = {}) {
-  const mode = options.mode || 'higher' // 'higher' | 'lower'
+  const mode = options.mode || 'higher' 
   const zeroMeansUnset = options.zeroMeansUnset === true
 
   try {

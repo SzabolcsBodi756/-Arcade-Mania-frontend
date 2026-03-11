@@ -35,10 +35,9 @@ function Login({ loginFn, initialValues } = {}) {
       const loginFunc = loginFn || authService.login
       const user = await loginFunc(cleanUsername, cleanPassword)
 
-      // user state mehet AuthProviderbe (optional if provider present)
+
       auth?.login?.(user)
 
-      // UX: ürítés
       setUsername('')
       setPassword('')
 

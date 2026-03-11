@@ -1,4 +1,3 @@
-// src/services/authService.js
 
 const API_BASE = 'http://localhost:5118/api/Users'
 const TOKEN_KEY = 'arcade_token'
@@ -15,26 +14,24 @@ export function logout() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-// Decode JWT payload (base64url) and return parsed object or null
+
 function parseJwtPayload(token) {
   try {
     const parts = token.split('.')
     if (parts.length < 2) return null
     let payload = parts[1]
-    // base64url -> base64
+
     payload = payload.replace(/-/g, '+').replace(/_/g, '/')
-    // pad
+
     while (payload.length % 4) payload += '='
     const json = atob(payload)
     return JSON.parse(json)
-  } catch (e) {
+  } catch {
     return null
   }
 }
 
-/**
- * Returns true when token is expired (or invalid/missing)
- */
+
 export function isTokenExpired(token) {
   if (!token) return true
   const payload = parseJwtPayload(token)

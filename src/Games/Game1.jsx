@@ -17,12 +17,12 @@ export default function Game1() {
   const runningRef = useRef(false)
   const endedRef = useRef(false)
 
-  // game objects in refs to avoid rerenders each frame
+
   const playerRef = useRef({ x: 40, y: 100, w: 80, h: 80 })
   const bulletsRef = useRef([])
   const enemiesRef = useRef([])
 
-  // UI state
+
   const [score, setScore] = useState(0)
   const scoreRef = useRef(0)
 
@@ -34,7 +34,7 @@ export default function Game1() {
 
   const navigate = useNavigate()
 
-  // sprite images refs
+
   const enemyImgsRef = useRef([])
   const playerImgRef = useRef(null)
 
@@ -53,7 +53,7 @@ export default function Game1() {
 }
 
 
-  // sizing
+
   function resizeCanvas() {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -68,7 +68,7 @@ export default function Game1() {
     ctx.scale(dpr, dpr)
   }
 
-  // spawn an enemy on the right moving left
+
   function spawnEnemy() {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -82,11 +82,11 @@ export default function Game1() {
       h: size,
       vx: -(2 + Math.random() * 3),
       hp: 1,
-      sprite: Math.floor(Math.random() * 2) // 0 = enemy ship, 1 = asteroid
+      sprite: Math.floor(Math.random() * 2) 
     })
   }
 
-  // simple AABB collision with optional padding
+
   function collide(a, b, pad = 0) {
     return !(
       a.x + a.w + pad < b.x - pad ||
@@ -125,7 +125,7 @@ export default function Game1() {
 }
 
 
-  // main update + draw loop
+
   function loop() {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -133,11 +133,11 @@ export default function Game1() {
     const w = canvas.clientWidth
     const h = canvas.clientHeight
 
-    // update
+
     bulletsRef.current.forEach((b) => { b.x += b.vx })
     enemiesRef.current.forEach((e) => { e.x += e.vx })
 
-    // collisions: bullets -> enemies
+
     for (let i = enemiesRef.current.length - 1; i >= 0; i--) {
       const e = enemiesRef.current[i]
       for (let j = bulletsRef.current.length - 1; j >= 0; j--) {
@@ -156,25 +156,24 @@ export default function Game1() {
       }
     }
 
-    // enemies hitting player -> game over
+
     const player = playerRef.current
     for (let i = enemiesRef.current.length - 1; i >= 0; i--) {
       const e = enemiesRef.current[i]
       if (collide(e, player)) {
-        // end game
+
         gameOver()
         return
       }
     }
 
-    // remove offscreen bullets/enemies
+
     bulletsRef.current = bulletsRef.current.filter(b => b.x < w + 50)
     enemiesRef.current = enemiesRef.current.filter(e => e.x + e.w > -50)
 
-    // draw
+
     ctx.clearRect(0, 0, w, h)
 
-    // player sprite (processed PNG). draw rotated to face right
     const pImg = playerImgRef.current
     if (pImg && pImg.complete) {
       ctx.save()
@@ -189,11 +188,11 @@ export default function Game1() {
       ctx.fillRect(player.x, player.y, player.w, player.h)
     }
 
-    // bullets
+
     ctx.fillStyle = '#ffd86b'
     bulletsRef.current.forEach((b) => ctx.fillRect(b.x, b.y, b.w, b.h))
 
-    // enemies as sprites with rectangle fallback
+
     enemiesRef.current.forEach((e) => {
       const imgs = enemyImgsRef.current || []
       const img = imgs[e.sprite]
@@ -201,7 +200,7 @@ export default function Game1() {
       else { ctx.fillStyle = '#ff6b6b'; ctx.fillRect(e.x, e.y, e.w, e.h) }
     })
 
-    // continue
+
     rafRef.current = requestAnimationFrame(loop)
   }
 

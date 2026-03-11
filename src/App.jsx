@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import './App.css'
 import Main from './pages/Main'
@@ -17,45 +17,26 @@ import { AuthProvider, RequireAuth } from './auth/AuthProvider'
 function AppContent() {
   const audioRef = useRef(null)
   const [muted, setMuted] = useState(true)
+  const [hasStarted, setHasStarted] = useState(false)
   const location = useLocation()
-
-  // háttérzene
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    audio.loop = true
-    let resumeMusic = null
-
-    audio.play().catch(() => {
-      resumeMusic = () => {
-        audio.play()
-        if (resumeMusic) {
-          document.removeEventListener('click', resumeMusic)
-        }
-      }
-      document.addEventListener('click', resumeMusic)
-    })
-
-    return () => {
-      if (resumeMusic) {
-        document.removeEventListener('click', resumeMusic)
-      }
-    }
-  }, [])
 
   const toggleMute = () => {
     const audio = audioRef.current
     if (!audio) return
 
-    if (muted) {
-      audio.play()
+    if (!hasStarted) {
+      audio.muted = false
+      audio.play().catch((err) => {
+        console.log('Lejátszás sikertelen:', err)
+      })
       setMuted(false)
-    } else {
-      audio.pause()
-      audio.currentTime = 0
-      setMuted(true)
+      setHasStarted(true)
+      return
     }
+
+    const newMuted = !muted
+    audio.muted = newMuted
+    setMuted(newMuted)
   }
 
   const headerProps = {
@@ -64,7 +45,6 @@ function AppContent() {
     title: 'Arcade Mania'
   }
 
-  // Login / Register oldalon jobb felső gomb
   if (location.pathname === '/login') {
     headerProps.rightLabel = 'Register'
     headerProps.rightTo = '/register'
@@ -75,7 +55,13 @@ function AppContent() {
 
   return (
     <div>
-      <audio ref={audioRef} src={bgMusic} />
+      <audio
+        ref={audioRef}
+        src={bgMusic}
+        loop
+        muted
+      />
+
       <Header {...headerProps} />
 
       <Routes>

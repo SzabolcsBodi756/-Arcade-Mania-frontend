@@ -1,4 +1,3 @@
-// src/pages/Leaderboard.jsx
 import React, { useEffect, useState } from 'react'
 import { getAllPublicUsers } from '../services/userService'
 
@@ -14,10 +13,11 @@ function Leaderboard({ fetchUsers } = {}) {
     async function load() {
       try {
         setLoading(true)
+        setError(null)
+
         const data = await (fetchUsers ? fetchUsers() : getAllPublicUsers())
         if (!isMounted) return
 
-        // Biztonság kedvéért: ha nem tömb jönne, legyen üres
         setUsers(Array.isArray(data) ? data : [])
       } catch (err) {
         if (!isMounted) return
@@ -28,23 +28,21 @@ function Leaderboard({ fetchUsers } = {}) {
     }
 
     load()
+
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [fetchUsers])
 
-  // ABC-sorrend username alapján (case-insensitive)
   const sortedUsers = [...users].sort((a, b) =>
     (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' })
   )
 
-  // Keresés – minden karakterre frissül
   const normalizedSearch = search.trim().toLowerCase()
   const filteredUsers = normalizedSearch
     ? sortedUsers.filter((u) => (u.name || '').toLowerCase().includes(normalizedSearch))
     : sortedUsers
 
-  // Segédfüggvény: adott játék high score-ja, ha nincs → 0
   const getScore = (user, gameName) => {
     const s = user.scores?.find((sc) => sc.gameName === gameName)
     return s ? s.highScore : 0
@@ -54,7 +52,6 @@ function Leaderboard({ fetchUsers } = {}) {
     <main className="page-container">
       <h1 className="page-title">Leaderboard</h1>
 
-      {/* 🔍 Keresőmező középen */}
       <div className="leaderboard-search-wrapper">
         <input
           className="leaderboard-search"
